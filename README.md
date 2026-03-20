@@ -4,7 +4,7 @@
 > Protecting gig workers' earnings from weather, pollution, and social disruptions — automatically.
 
 **🔗 Live Prototype:** Clone & run locally (see [Setup](#-setup--run))  
-**🎥 Demo Video:** [2-minute walkthrough](#)
+**🎥 Demo Video:** [2-minute walkthrough](https://youtu.be/xGnYxrY4gdA)
 
 ---
 
