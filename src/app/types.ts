@@ -176,4 +176,5 @@ export type PageType =
   | "triggers"
   | "analytics"
   | "profile"
-  | "admin";
+  | "admin"
+  | "redteam";
