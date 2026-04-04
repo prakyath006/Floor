@@ -15,6 +15,7 @@
 - [Application Workflow](#-application-workflow)
 - [Weekly Premium Model](#-weekly-premium-model)
 - [Parametric Triggers](#-parametric-triggers)
+- [Standard Exclusions & Edge Cases](#-standard-exclusions--edge-cases)
 - [How Our AI Actually Works](#-how-our-ai-actually-works)
 - [Fraud Detection — Technical Deep Dive](#-fraud-detection--technical-deep-dive)
 - [Adversarial Defense & Anti-Spoofing Strategy](#-adversarial-defense--anti-spoofing-strategy)
@@ -730,13 +731,17 @@ src/app/
 ├── globals.css           # Design system (dark theme, glassmorphism)
 ├── types.ts              # TypeScript interfaces
 ├── data.ts               # Mock data + AI simulation engine
+├── context/
+│   └── AppContext.tsx     # Global state: workers, policies, claims, triggers
 └── components/
-    ├── Navbar.tsx         # Responsive navigation
-    ├── LandingPage.tsx    # Hero + pricing + coverage
-    ├── OnboardingPage.tsx # 4-step registration wizard
-    ├── DashboardPage.tsx  # Stats, charts, recent claims
-    ├── PoliciesPage.tsx   # Policy cards + trigger config
-    ├── ClaimsPage.tsx     # Claims + fraud analysis view
+    ├── Navbar.tsx         # Responsive navigation with Triggers link
+    ├── LandingPage.tsx    # Hero + pricing + coverage + anti-spoofing
+    ├── RegisterPage.tsx   # Phone OTP verification (Phase 2)
+    ├── OnboardingPage.tsx # 4-step wizard with ML premium visualizer
+    ├── DashboardPage.tsx  # Stats, charts, recent claims, trigger CTA
+    ├── PoliciesPage.tsx   # Policy cards: pause/resume/upgrade + exclusions
+    ├── ClaimsPage.tsx     # Claims + fraud analysis + lifecycle timeline
+    ├── TriggerCenterPage.tsx # API Trigger Center: 5 mock APIs (Phase 2)
     ├── AlertsPage.tsx     # Weather alerts + disruption simulator
     ├── AnalyticsPage.tsx  # Analytics charts for insurers
     ├── AdminPage.tsx      # Worker management + fraud review
@@ -757,16 +762,13 @@ src/app/
 - [x] Disruption simulator for live demo
 - [x] Analytics dashboard with Recharts visualizations
 
-### Phase 2 (Weeks 3-4) — "Protect Your Worker"
-- [ ] Node.js + Express backend API
-- [ ] MongoDB Atlas database integration
-- [ ] Live OpenWeatherMap API integration
-- [ ] Live CPCB AQI API integration
-- [ ] OTP-based worker authentication
-- [ ] Real policy purchase and renewal flow
-- [ ] Automated trigger monitoring (cron jobs, every 15 min)
-- [ ] Auto-claim processing pipeline
-- [ ] SMS notifications via MSG91
+### Phase 2 (Weeks 3-4) ✅ — "Protect Your Worker" (Current Submission)
+- [x] **Registration Process**: Interactive OTP-based phone verification flow mirroring actual gig-worker onboarding.
+- [x] **Insurance Policy Management**: Upgraded dashboard to view, pause, resume, and upgrade policies with dynamic coverage tracking.
+- [x] **Dynamic Premium Calculation**: Embedded ML-adjusted weekly pricing factors (zone + weather + history) with visual breakdown.
+- [x] **Claims Management**: Implemented end-to-end claim lifecycle timeline (6-step tracking from detection to UPI payout).
+- [x] **3-5 Automated Triggers**: Built an interactive 'Trigger Center' connecting 5 simulated live APIs (Weather, AQI, IMD, Platform, City Sensors) to automatically fire claims upon threshold breach.
+- [x] **Zero-Touch UX**: Added visual "Push Notification Simulator" to prove the instant, UI-less claim experience required for parametric insurance.
 
 ### Phase 3 (Weeks 5-6) — "Perfect for Your Worker"
 - [ ] Advanced fraud detection (GPS spoofing via device fingerprinting)
