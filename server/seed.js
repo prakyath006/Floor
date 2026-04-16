@@ -1,12 +1,16 @@
 // ============================================================
-// Floor — Database Seeder
-// Populates MongoDB with realistic insurtech data
+// Floor — Database Seeder (Phase 3)
+// Populates MongoDB with realistic insurtech data + payouts
 // ============================================================
 require("dotenv").config();
 const mongoose = require("mongoose");
-const Worker = require("./models/Worker");
-const Policy = require("./models/Policy");
-const Claim = require("./models/Claim");
+const crypto   = require("crypto");
+const bcrypt   = require("bcryptjs");
+const Worker   = require("./models/Worker");
+const Policy   = require("./models/Policy");
+const Claim    = require("./models/Claim");
+const Payout   = require("./models/Payout");
+const User     = require("./models/User");
 
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/floor";
 
@@ -55,6 +59,12 @@ const DISRUPTION_EVENTS = [
   { type: "platform", event: "Zomato Server Outage — 3.5 hours", condition: "Platform Outage" },
 ];
 
+function randomId(prefix, len = 14) {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const suffix = Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  return `${prefix}_${suffix}`;
+}
+
 async function seed() {
   try {
     await mongoose.connect(MONGO_URI);
@@ -64,6 +74,8 @@ async function seed() {
     await Worker.deleteMany({});
     await Policy.deleteMany({});
     await Claim.deleteMany({});
+    await Payout.deleteMany({});
+    await User.deleteMany({});
     console.log("🗑️  Cleared existing data");
 
     // Create workers with risk scoring
@@ -87,12 +99,11 @@ async function seed() {
     for (let i = 0; i < workers.length; i++) {
       const plan = plans[i];
       const config = PLAN_CONFIG[plan];
-      // Dynamic premium based on risk
       const riskMultiplier = 1 + (workers[i].riskScore / 200);
       const weeklyPremium = Math.round(config.basePremium * riskMultiplier);
 
       const startDate = new Date();
-      startDate.setDate(startDate.getDate() - Math.floor(Math.random() * 21)); // started 0-21 days ago
+      startDate.setDate(startDate.getDate() - Math.floor(Math.random() * 21));
       const endDate = new Date(startDate);
       endDate.setDate(endDate.getDate() + 7);
 
@@ -106,7 +117,7 @@ async function seed() {
         triggers: DEFAULT_TRIGGERS[plan],
         startDate,
         endDate,
-        status: i < 6 ? "active" : (i === 6 ? "active" : "active"),
+        status: "active",
       });
       await policy.save();
       policies.push(policy);
@@ -162,10 +173,66 @@ async function seed() {
     }
     console.log(`⚡ Created ${claims.length} claims`);
 
+    // Phase 3: Create seeded payouts for all "paid" claims
+    const payouts = [];
+    for (const claim of claims) {
+      if (claim.status !== "paid") continue;
+      const worker = workers.find(w => w._id.equals(claim.workerId));
+      if (!worker) continue;
+
+      const orderId   = randomId("order");
+      const paymentId = randomId("pay");
+      const secret    = "floor_razorpay_test_secret_key";
+      const signature = crypto.createHmac("sha256", secret).update(`${orderId}|${paymentId}`).digest("hex");
+      const processingMs = 800 + Math.floor(Math.random() * 1700);
+      const upiSuffixes  = { zomato: "zomato", swiggy: "oksbi", zepto: "paytm", blinkit: "ybl", dunzo: "apl" };
+      const upiId = `${worker.phone.replace(/\D/g, "").slice(-10)}@${upiSuffixes[worker.platform] || "upi"}`;
+
+      const payout = new Payout({
+        claimId:          claim._id,
+        workerId:         worker._id,
+        policyId:         claim.policyId,
+        workerName:       worker.name,
+        amount:           claim.amount,
+        method:           "upi",
+        status:           "success",
+        gatewayOrderId:   orderId,
+        gatewayPaymentId: paymentId,
+        gatewaySignature: signature,
+        upiId,
+        processingMs,
+        processedAt:      claim.paidDate || new Date(),
+        settledAt:        claim.paidDate || new Date(),
+        disruptionEvent:  claim.disruptionEvent,
+        city:             claim.location?.city || worker.city,
+      });
+      await payout.save();
+      payouts.push(payout);
+    }
+    console.log(`💳 Created ${payouts.length} UPI payouts`);
+
+    // Create demo user accounts (password: floor123) for all seeded workers
+    const DEMO_PASSWORD = "floor123";
+    const passwordHash  = await bcrypt.hash(DEMO_PASSWORD, 12);
+    let userCount = 0;
+    for (const worker of workers) {
+      await new User({
+        email:        worker.email,
+        passwordHash,
+        name:         worker.name,
+        workerId:     worker._id,
+        role:         "worker",
+      }).save();
+      userCount++;
+    }
+    console.log(`🔐 Created ${userCount} user accounts (password: ${DEMO_PASSWORD})`);
+
     console.log("\n🚀 Seed complete! Floor database is ready.");
     console.log(`   Workers:  ${workers.length}`);
     console.log(`   Policies: ${policies.length}`);
     console.log(`   Claims:   ${claims.length}`);
+    console.log(`   Payouts:  ${payouts.length}`);
+    console.log(`   Users:    ${userCount} (password: ${DEMO_PASSWORD})`);
 
     await mongoose.disconnect();
     process.exit(0);
